@@ -371,7 +371,7 @@ export default function App() {
       gender: emp.gender || 'Other',
       avatar: `https://i.picsum.photos/seed/${(emp.name || 'user').split(' ')[0]}/200/200.jpg`,
       rbacRole: targetRbacRole,
-      isTeamLeader: targetRbacRole === 'admin',
+      isTeamLeader: emp.isTeamLeader || targetRbacRole === 'admin',
       leaderId: emp.leaderId || (userRole === 'admin' ? user?.uid : '')
     };
     
@@ -457,6 +457,7 @@ export default function App() {
             onBack={() => setCurrentScreen(previousScreen)}
             onNavigate={navigateTo}
             userRole={userRole}
+            employees={employees}
           />
         ) : null;
       case 'edit-employee':
@@ -1125,7 +1126,7 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
   const [showAddModal, setShowAddModal] = useState(false);
   const [roleSearch, setRoleSearch] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [newEmp, setNewEmp] = useState<{name: string, role: string, department: string, email: string, contact: string, gender: 'Male' | 'Female' | 'Other', rbacRole: 'admin' | 'employee', leaderId: string}>({ 
+  const [newEmp, setNewEmp] = useState<{name: string, role: string, department: string, email: string, contact: string, gender: 'Male' | 'Female' | 'Other', rbacRole: 'admin' | 'employee', leaderId: string, isTeamLeader: boolean}>({ 
     name: '', 
     role: '', 
     department: userRole === 'admin' ? (userDepartment || 'Engineering') : 'Engineering', 
@@ -1133,7 +1134,8 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
     contact: '',
     gender: 'Male',
     rbacRole: userRole === 'super_admin' ? 'admin' : 'employee',
-    leaderId: ''
+    leaderId: '',
+    isTeamLeader: false
   });
 
   const filteredRoles = TECH_ROLES.filter(r => 
@@ -1147,7 +1149,7 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
   const handleAdd = () => {
     if (!newEmp.name || !newEmp.role) return;
     onAdd(newEmp);
-    setNewEmp({ name: '', role: '', department: 'Engineering', email: '', contact: '', gender: 'Male', rbacRole: 'employee', leaderId: '' });
+    setNewEmp({ name: '', role: '', department: 'Engineering', email: '', contact: '', gender: 'Male', rbacRole: 'employee', leaderId: '', isTeamLeader: false });
     setShowAddModal(false);
   };
 
@@ -1418,8 +1420,9 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
                   <div className="relative">
                     <select 
                       value={newEmp.leaderId}
+                      disabled={newEmp.isTeamLeader}
                       onChange={(e) => setNewEmp({...newEmp, leaderId: e.target.value})}
-                      className={`w-full h-12 border rounded-xl px-4 text-sm font-medium outline-none transition-all appearance-none ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-white/5 border-white/10 text-white'}`}
+                      className={`w-full h-12 border rounded-xl px-4 text-sm font-medium outline-none transition-all appearance-none ${newEmp.isTeamLeader ? 'opacity-50 grayscale' : ''} ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-white/5 border-white/10 text-white'}`}
                     >
                       <option value="" className={theme === 'light' ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}>No Leader (Independent)</option>
                       {employees
@@ -1433,6 +1436,18 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
                     </select>
                     <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Team Leadership</p>
+                    <p className="text-[9px] text-slate-500">Mark this person as a Team Leader</p>
+                  </div>
+                  <button 
+                    onClick={() => setNewEmp(prev => ({ ...prev, isTeamLeader: !prev.isTeamLeader, leaderId: !prev.isTeamLeader ? '' : prev.leaderId }))}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${newEmp.isTeamLeader ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 ${newEmp.isTeamLeader ? 'left-7' : 'left-1'}`} />
+                  </button>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Hierarchy Level (Locked)</label>
@@ -1470,13 +1485,17 @@ function EmployeeListScreen({ employees, searchQuery, setSearchQuery, onSelect, 
   );
 }
 
-function EmployeeDetailScreen({ employee, onBack, onNavigate, theme, userRole }: { 
+function EmployeeDetailScreen({ employee, onBack, onNavigate, theme, userRole, employees }: { 
   employee: Employee, 
   onBack: () => void,
   onNavigate: (screen: Screen, id: string | null) => void,
   theme: 'dark' | 'light',
-  userRole: string | null
+  userRole: string | null,
+  employees: Employee[]
 }) {
+  const leader = employees.find(e => e.id === employee.leaderId);
+  const teamMembers = employees.filter(e => e.leaderId === employee.id);
+
   return (
     <div className={`pb-10 min-h-full transition-colors duration-500 ${theme === 'light' ? 'bg-slate-50' : 'bg-slate-950'}`}>
       <header className={`relative h-64 transition-colors duration-500 ${theme === 'light' ? 'bg-indigo-50' : 'bg-slate-900'}`}>
@@ -1537,9 +1556,64 @@ function EmployeeDetailScreen({ employee, onBack, onNavigate, theme, userRole }:
           <p className="text-indigo-600 dark:text-indigo-400 font-bold text-sm sm:text-base mt-1 truncate">{employee.role}</p>
           <div className="flex flex-wrap gap-2 mt-4">
             <Badge className={`border px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-500 ${theme === 'light' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>{employee.department}</Badge>
+            {employee.isTeamLeader && (
+              <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] px-3 py-1 rounded-lg font-bold uppercase tracking-wider">Team Leader</Badge>
+            )}
             <Badge className={`border px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-500 ${theme === 'light' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>Active Status</Badge>
           </div>
         </motion.div>
+
+        {/* Team Section */}
+        {(leader || teamMembers.length > 0) && (
+          <div className="mt-10 space-y-6">
+            <h2 className={`text-xl font-display font-bold transition-colors duration-500 ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Team & Hierarchy</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {leader && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} 
+                  animate={{ opacity: 1, x: 0 }}
+                  onClick={() => onNavigate('employee-detail', leader.id)}
+                  className="card-premium p-5 flex items-center gap-4 cursor-pointer group"
+                >
+                  <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
+                    <Users size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Reports To</p>
+                    <p className={`text-sm font-bold group-hover:text-indigo-500 transition-colors ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{leader.name}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-500" />
+                </motion.div>
+              )}
+              {teamMembers.length > 0 && (
+                <div className="card-premium p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500">
+                      <Users size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Direct Reports</p>
+                      <p className={`text-sm font-bold ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{teamMembers.length} Members</p>
+                    </div>
+                  </div>
+                  <div className="flex -space-x-3 overflow-hidden">
+                    {teamMembers.slice(0, 5).map(m => (
+                      <Avatar key={m.id} className="h-10 w-10 border-4 border-slate-950 shadow-lg">
+                        <AvatarImage src={m.avatar} />
+                        <AvatarFallback className="bg-indigo-500/20 text-indigo-500 text-xs font-bold">{m.name[0]}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {teamMembers.length > 5 && (
+                      <div className="h-10 w-10 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                        +{teamMembers.length - 5}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 space-y-6">
           <h2 className={`text-xl font-display font-bold transition-colors duration-500 ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Contact Information</h2>
@@ -2740,7 +2814,7 @@ function TaskScreen({ onBack, tasks, onAddTask, onUpdateStatus, initialFilter, t
                     value={newTask.details}
                     onChange={(e) => setNewTask({...newTask, details: e.target.value})}
                     placeholder="Provide detailed instructions for this task..."
-                    className={`w-full min-h-[100px] p-4 rounded-xl text-sm transition-all border outline-none resize-none ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-900 focus:border-indigo-500' : 'bg-white/5 border-white/10 text-white focus:border-indigo-500'}`}
+                    className={`w-full min-h-[120px] p-4 rounded-xl text-sm transition-all border outline-none resize-y ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-900 focus:border-indigo-500' : 'bg-white/5 border-white/10 text-white focus:border-indigo-500'}`}
                   />
                 </div>
                 <div className="space-y-1.5 relative">
