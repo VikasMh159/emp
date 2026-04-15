@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user with role-based access control.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "employee"],
+          "description": "User role for access control"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        }
+      },
+      "required": ["userId", "email", "role"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Employee record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "department": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "On Leave", "Remote"] },
+        "rating": { "type": "number" },
+        "joiningDate": { "type": "string" }
+      },
+      "required": ["id", "name", "role", "department"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Assigned task.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "status": { "type": "string", "enum": ["Pending", "Completed"] },
+        "date": { "type": "string" },
+        "targetRole": { "type": "string" }
+      },
+      "required": ["id", "employeeId", "description", "priority", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and role data"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Employee records"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Task records"
+    }
+  }
+}
